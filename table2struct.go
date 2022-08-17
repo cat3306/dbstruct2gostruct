@@ -1,4 +1,4 @@
-package converter
+package dbstruct2gostruct
 
 import (
 	"database/sql"
@@ -51,18 +51,18 @@ var typeForMysqlToGo = map[string]string{
 }
 
 type Table2Struct struct {
-	dsn            string
-	savePath       string
-	db             *sql.DB
-	table          string
-	prefix         string
-	config         *T2tConfig
-	err            error
-	realNameMethod string
-	enableJsonTag  bool   // 是否添加json的tag, 默认不添加
-	packageName    string // 生成struct的包名(默认为空的话, 则取名为: package model)
-	tagKey         string // tag字段的key值,默认是orm
-	dateToTime     bool   // 是否将 date相关字段转换为 time.Time,默认否
+	dsn             string
+	savePath        string
+	db              *sql.DB
+	table           string
+	prefix          string
+	config          *T2tConfig
+	err             error
+	structTableName string //生成对应的struct TableName函数
+	enableJsonTag   bool   // 是否添加json的tag, 默认不添加
+	packageName     string // 生成struct的包名(默认为空的话, 则取名为: package model)
+	tagKey          string // tag字段的key值,默认是orm
+	dateToTime      bool   // 是否将 date相关字段转换为 time.Time,默认否
 }
 
 type T2tConfig struct {
@@ -93,8 +93,8 @@ func (t *Table2Struct) PackageName(r string) *Table2Struct {
 	return t
 }
 
-func (t *Table2Struct) RealNameMethod(r string) *Table2Struct {
-	t.realNameMethod = r
+func (t *Table2Struct) StructTableName(r string) *Table2Struct {
+	t.structTableName = r
 	return t
 }
 
@@ -118,8 +118,8 @@ func (t *Table2Struct) Prefix(p string) *Table2Struct {
 	return t
 }
 
-func (t *Table2Struct) EnableJsonTag(p bool) *Table2Struct {
-	t.enableJsonTag = p
+func (t *Table2Struct) EnableJsonTag() *Table2Struct {
+	t.enableJsonTag = true
 	return t
 }
 
@@ -135,8 +135,16 @@ func (t *Table2Struct) Config(c *T2tConfig) *Table2Struct {
 
 func (t *Table2Struct) Run() error {
 	if t.config == nil {
-		t.config = new(T2tConfig)
+		t.config = &T2tConfig{
+			StructNameToHump: true,
+			RmTagIfUcFirsted: false,
+			TagToLower:       false,
+			JsonTagToHump:    false,
+			UcFirstOnly:      false,
+			SeperatFile:      false,
+		}
 	}
+
 	// 链接mysql, 获取db对象
 	t.dialMysql()
 	if t.err != nil {
@@ -193,9 +201,12 @@ func (t *Table2Struct) Run() error {
 		structContent += tab(depth-1) + "}\n\n"
 
 		// 添加 method 获取真实表名
-		if t.realNameMethod != "" {
+		if t.structTableName == "" {
+			t.structTableName = "TableName"
+		}
+		if t.structTableName != "" {
 			structContent += fmt.Sprintf("func (%s) %s() string {\n",
-				structName, t.realNameMethod)
+				structName, t.structTableName)
 			structContent += fmt.Sprintf("%sreturn \"%s\"\n",
 				tab(depth), tableRealName)
 			structContent += "}\n\n"
@@ -319,12 +330,13 @@ func (t *Table2Struct) getColumns(table ...string) (tableColumns map[string][]co
 		if t.tagKey == "" {
 			t.tagKey = "orm"
 		}
-		if t.enableJsonTag {
-			//col.Json = fmt.Sprintf("`json:\"%s\" %s:\"%s\"`", col.Json, t.config.TagKey, col.Json)
-			col.Tag = fmt.Sprintf("`%s:\"%s\" json:\"%s\"`", t.tagKey, col.Tag, jsonTag)
-		} else {
-			col.Tag = fmt.Sprintf("`%s:\"%s\"`", t.tagKey, col.Tag)
-		}
+		col.Tag = t.genFiledTag(col.Tag, jsonTag)
+		//if t.enableJsonTag {
+		//	//col.Json = fmt.Sprintf("`json:\"%s\" %s:\"%s\"`", col.Json, t.config.TagKey, col.Json)
+		//	col.Tag = fmt.Sprintf("`%s:\"%s\" json:\"%s\"`", t.tagKey, col.Tag, jsonTag)
+		//} else {
+		//	col.Tag = fmt.Sprintf("`%s:\"%s\"`", t.tagKey, col.Tag)
+		//}
 		//columns = append(columns, col)
 		if _, ok := tableColumns[col.TableName]; !ok {
 			tableColumns[col.TableName] = []column{}
@@ -360,4 +372,17 @@ func (t *Table2Struct) camelCase(str string) string {
 }
 func tab(depth int) string {
 	return strings.Repeat("\t", depth)
+}
+func (t *Table2Struct) genFiledTag(filedName string, jsonTag string) string {
+	tag := ""
+	if t.tagKey == "gorm" {
+		filedName = "column:" + filedName
+	}
+	if t.enableJsonTag {
+		//col.Json = fmt.Sprintf("`json:\"%s\" %s:\"%s\"`", col.Json, t.config.TagKey, col.Json)
+		tag = fmt.Sprintf("`%s:\"%s\" json:\"%s\"`", t.tagKey, filedName, jsonTag)
+	} else {
+		tag = fmt.Sprintf("`%s:\"%s\"`", t.tagKey, filedName)
+	}
+	return tag
 }

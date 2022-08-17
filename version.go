@@ -1,4 +1,4 @@
-package converter
+package dbstruct2gostruct
 
 const VERSION  = "0.0.3"
 

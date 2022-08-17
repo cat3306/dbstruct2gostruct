@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/gohouse/converter"
+	"github.com/cat3306/dbstruct2gostruct"
 	"log"
 )
 
@@ -21,7 +21,7 @@ func parser() {
 	prefix := flag.String("prefix", "", "表前缀")
 	version := flag.Bool("version", false, "版本号")
 	v := flag.Bool("v", false, "版本号")
-	enableJsonTag := flag.Bool("enableJsonTag", false, "是否添加json的tag,默认false")
+	//enableJsonTag := flag.Bool("enableJsonTag", false, "是否添加json的tag,默认false")
 	h := flag.Bool("h", false, "帮助")
 	help := flag.Bool("help", false, "帮助")
 
@@ -36,14 +36,14 @@ func parser() {
 	// 版本号
 	if *version || *v {
 		fmt.Println(fmt.Sprintf("\n version: %s\n %s\n using -h param for more help \n",
-			converter.VERSION, converter.VERSION_TEXT))
+			dbstruct2gostruct.VERSION, dbstruct2gostruct.VERSION_TEXT))
 		return
 	}
 
 	// 初始化
-	t2t := converter.NewTable2Struct()
+	t2t := dbstruct2gostruct.NewTable2Struct()
 	// 个性化配置
-	t2t.Config(&converter.T2tConfig{
+	t2t.Config(&dbstruct2gostruct.T2tConfig{
 		// 如果字段首字母本来就是大写, 就不添加tag, 默认false添加, true不添加
 		RmTagIfUcFirsted: false,
 		// tag的字段名字是否转换为小写, 如果本身有大写字母的话, 默认false不转
@@ -60,13 +60,13 @@ func parser() {
 		// 表前缀
 		Prefix(*prefix).
 		// 是否添加json tag
-		EnableJsonTag(*enableJsonTag).
+		EnableJsonTag().
 		// 生成struct的包名(默认为空的话, 则取名为: package model)
 		PackageName(*packageName).
 		// tag字段的key值,默认是orm
 		TagKey(*tagKey).
 		// 是否添加结构体方法获取表名
-		RealNameMethod(*realNameMethod).
+		StructTableName(*realNameMethod).
 		// 生成的结构体保存路径
 		SavePath(*file).
 		// 数据库dsn
