@@ -10,8 +10,14 @@ func main() {
 
 	err := t2t.
 		SavePath("./t.go").
-		Dsn("root:12345678@tcp(127.0.0.1:3306)/demo?charset=utf8").
-		Table("student_grade").DateToTime(true).TagKey("gorm").EnableJsonTag().
+		Dsn(&dbstruct2gostruct.DsnConf{
+			Ip:       "127.0.0.1",
+			Port:     3306,
+			DataBase: "demo",
+			User:     "root",
+			Pwd:      "12345678",
+		}).
+		Table("student_grade").DateToTime(true).TagKey("gorm").EnableJsonTag().PackageName("main").
 		Run()
 	fmt.Println(err)
 }

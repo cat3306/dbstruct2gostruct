@@ -63,6 +63,7 @@ type Table2Struct struct {
 	packageName     string // 生成struct的包名(默认为空的话, 则取名为: package model)
 	tagKey          string // tag字段的key值,默认是orm
 	dateToTime      bool   // 是否将 date相关字段转换为 time.Time,默认否
+	dataBase        string
 }
 
 type T2tConfig struct {
@@ -73,13 +74,21 @@ type T2tConfig struct {
 	UcFirstOnly      bool // 字段首字母大写的同时, 是否要把其他字母转换为小写,默认false不转换
 	SeperatFile      bool // 每个struct放入单独的文件,默认false,放入同一个文件
 }
+type DsnConf struct {
+	Ip       string
+	Port     int
+	DataBase string
+	User     string
+	Pwd      string
+}
 
 func NewTable2Struct() *Table2Struct {
 	return &Table2Struct{}
 }
 
-func (t *Table2Struct) Dsn(d string) *Table2Struct {
-	t.dsn = d
+func (t *Table2Struct) Dsn(c *DsnConf) *Table2Struct {
+	t.dsn = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8", c.User, c.Pwd, c.Ip, c.Port, c.DataBase)
+	t.dataBase = c.DataBase
 	return t
 }
 
@@ -208,7 +217,7 @@ func (t *Table2Struct) Run() error {
 			structContent += fmt.Sprintf("func (%s) %s() string {\n",
 				structName, t.structTableName)
 			structContent += fmt.Sprintf("%sreturn \"%s\"\n",
-				tab(depth), tableRealName)
+				tab(depth), t.dataBase+"."+tableRealName)
 			structContent += "}\n\n"
 		}
 	}

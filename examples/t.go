@@ -1,4 +1,4 @@
-package model
+package main
 
 type StudentGrade struct {
 	Id            int64  `gorm:"column:id" json:"id"`                         // 主键id
@@ -12,5 +12,5 @@ type StudentGrade struct {
 }
 
 func (StudentGrade) TableName() string {
-	return "student_grade"
+	return "demo.student_grade"
 }
